@@ -1,8 +1,30 @@
+import json
+from asgiref.sync import async_to_sync
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.forms.models import model_to_dict
+from channels.layers import get_channel_layer
 from patients.models import Appointment, Patient, Wallet
 from kavenegar import *
 from core.tasks import send_SMS_task
+
+
+channel_layer = get_channel_layer()
+
+
+@receiver(post_save, sender=Appointment)
+def appointment_action(sender, instance, created, **kwargs):
+    if created or instance.status_reservation == 'free':
+        data = model_to_dict(instance)
+        data.update({'action': 'add'})
+        async_to_sync(channel_layer.group_send)(
+            'doctor_id', {'type': 'send_action_appointment', 'text': json.dumps(data, indent=4, sort_keys=True, default=str)})
+
+    elif instance.status_reservation == 'reserve':
+        data = model_to_dict(instance)
+        data.update({'action': 'remove'})
+        async_to_sync(channel_layer.group_send)(
+            'doctor_id', {'type': 'send_action_appointment', 'text': json.dumps(data, indent=4, sort_keys=True, default=str)})
 
 
 @receiver(post_save, sender=Patient)

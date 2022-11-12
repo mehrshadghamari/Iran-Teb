@@ -13,6 +13,8 @@ def create_first_obj_appointment(sender, instance, created, **kwargs):
         return True
 
 
+
+
 @receiver(post_save, sender=Appointment)
 def send_sms_for_cancel_appointment_by_docotor(sender, instance, created, **kwargs):
     if instance.status_reservation == 'cancel':
